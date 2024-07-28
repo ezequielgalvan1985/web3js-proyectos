@@ -1,0 +1,15 @@
+requisitos:
+    npm i web3
+    npm i solc@^0.8.0
+
+pasos para la ejecucion:
+1) Compile, se compila y genera el bytecode y el abi
+node compile.js SimpleAuction
+
+2) Deploy, se despliega el contrato a la red blockchain
+node deploy.js SimpleAuction
+
+3) Interact, se usa para interactuar con el contrato
+node interact.js SimpleAuction
+
+

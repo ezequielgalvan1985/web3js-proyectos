@@ -1,0 +1,27 @@
+npm i solc@^0.8.0
+
+1) Compile, se compila y genera el bytecode y el abi
+node compile.js
+
+2) Deploy, se despliega el contrato a la red blockchain
+node deploy.js
+
+3) Interact, se usa para interactuar con el contrato
+node interact.js
+
+Despliegue del contrato
+Deployer account: 0x8bAC007De6122E7843C47859d981Fa94f8c9104E
+Estimated gas: 142760n
+Contract deployed at address: 0x2670d6f68E7CBF00EeFf932320B91a5157EA2016
+
+
+
+* Compilacion y despliegue de contrato SimpleAuction en Ganache
+contractName:  SimpleAuction
+Deployer account: 0x8bAC007De6122E7843C47859d981Fa94f8c9104E
+Estimated gas: 531940n
+Contract deployed at address: 0x128A8128CC118be98fBb1393559CE5C9C5A5ed07
+
+* Interactuar con el contrato SimpleAuction
+
+
