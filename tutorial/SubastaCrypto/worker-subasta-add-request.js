@@ -46,60 +46,6 @@ amqp.connect(_server, function(error0, connection) {
   });
 
 
-
-/*
-async function fnCompilarContrato(json_request_dto) {
-  try {
-    const contractName = 'SimpleAuction'; 
-    const fileName = `${contractName}.sol`;
-    const contractNameByteCode = contractName + "Bytecode.bin";
-    const contractNameAbi = contractName + "Abi.json";
-    // Read the Solidity source code from the file system
-    const contractPath = path.join(__dirname, fileName);
-    const sourceCode = fs.readFileSync(contractPath, "utf8");
-    // solc compiler config
-    const input = {
-      language: "Solidity",
-      sources: {
-        [fileName]: {
-          content: sourceCode,
-        },
-      },
-      settings: {
-        outputSelection: {
-          "*": {
-            "*": ["*"],
-          },
-        },
-      },
-    };
-    // Compile the Solidity code using solc
-    const compiledCode = JSON.parse(solc.compile(JSON.stringify(input)));
-    console.log("compiledCode: ",compiledCode);
-    // Get the bytecode from the compiled contract
-    const bytecode = compiledCode.contracts[fileName][contractName].evm.bytecode.object;
-    // Write the bytecode to a new file
-    const bytecodePath = path.join(__dirname, contractNameByteCode);
-    fs.writeFileSync(bytecodePath, bytecode);
-    // Get the ABI from the compiled contract
-    const abi = compiledCode.contracts[fileName][contractName].abi;
-    // Write the Contract ABI to a new file
-    const abiPath = path.join(__dirname, contractNameAbi);
-    fs.writeFileSync(abiPath, JSON.stringify(abi, null, "\t"));
-
-  }catch (error) {
-    console.error(error);
-    var json_response = {
-      "tx_hash":"",
-      "estado":3,
-      "mensaje":"Error con la red,  no se concreto la transaccino.",
-      "id": json_request_dto.id
-    }
-    fnPublicarMensajeMQ("licitacion.response.queue", json_response);
-  }
-}
-*/
-
 async function fnDeployContrato(json_request_dto ) {
   try {    
     const web3 = new Web3("http://127.0.0.1:7545/");
