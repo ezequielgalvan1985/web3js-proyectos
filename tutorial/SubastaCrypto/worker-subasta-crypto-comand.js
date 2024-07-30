@@ -13,10 +13,10 @@ const fs = require("fs");
 //FIN CONFIGURACION WEB3 Y CONTRATO SimpleAuction
 
 const Command = {
-  DEPLOY: 'deploy',
-  AUCTION_END: 'auctionend',
-  WITHDRAW: 'withdraw',
-  BID: 'bid',
+  DEPLOY: "deploy",
+  AUCTION_END: "auctionend",
+  WITHDRAW: "withdraw",
+  BID: "bid"
 };
 
 const Estado = {
@@ -48,25 +48,44 @@ amqp.connect(_server, function(error0, connection) {
       console.log(" [x] Received %s", msg.content.toString());
       
       //convertir los datos recibidos a un json
+      
       json_request_dto = JSON.parse(msg.content.toString());
-      console.log("json_request_dto")
-      switch (json_request_dto.command) {
+        
+      try{
+        
+        if (json_request_dto.command.toString()==="deploy"){
+          console.log("DEPLOY: ",json_request_dto);
+          fnDeployContrato(json_request_dto);
+        }
+        if (json_request_dto.command==="bid"){
+          console.log("LICITACION_BID: ",json_request_dto);
+          fnRealizarOferta(json_request_dto);
+        }
 
+      }catch(e){
+        console.log("error:",e);
+      }
+      
+/*
+      if (json_response_dto.command===Command.BID.toString()){
+        console.log("LICITACION_BID: ",json_request_dto);
+        fnRealizarOferta(json_request_dto);
+      }
+
+
+      switch (json_request_dto.command) {
         case Command.DEPLOY:
             console.log("DEPLOY: ",json_request_dto);
             fnDeployContrato(json_request_dto);
             break;
-
         case Command.AUCTION_END:
           console.log("AUCTION_END: ",json_request_dto.data);
-          fnAuctionEnd(json_request_dto.data);
+          //fnAuctionEnd(json_request_dto.data);
           break;
-
         case Command.WITHDRAW:
           console.log("WITHDRAW: ",json_request_dto.data);
-          fnDeployContrato(json_request_dto.data);
+          //fnDeployContrato(json_request_dto.data);
           break;
-
         case Command.LICITACION_BID:
           console.log("LICITACION_BID: ",json_request_dto.data);
           fnRealizarOferta(json_request_dto.data);
@@ -77,7 +96,7 @@ amqp.connect(_server, function(error0, connection) {
             // Código a ejecutar si expresión no coincide con ninguno de los casos
             break;
     }
-    
+  */  
 
       
       
@@ -268,25 +287,24 @@ amqp.connect(_server, function(error0, connection) {
   }
 
 
-async function fnRealizarOferta(json_request_dto ) {
+async function fnRealizarOferta(json_request_dto) {
   
   try {
+   
     const web3 = new Web3("http://127.0.0.1:7545/");
 
     const contractName = "SimpleAuction"; 
-    const contractNameByteCode = contractName + "Bytecode.bin";
     const contractNameAbi = "./"+contractName + "Abi.json";
-    //console.log("_addressContrato: ", _addressContrato)
-    //console.log("contractNameAbi: ",contractNameAbi);
+    
     
     // Create a new contract object using the ABI and address    
     const abi = require(contractNameAbi);
-    const currentContract = new web3.eth.Contract(abi, json_request_dto.subasta.address);
+    const currentContract = new web3.eth.Contract(abi, json_request_dto.data.subasta.address_contrato);
     currentContract.handleRevert = true;
-    const bidAmount = BigInt(parseFloat(json_request_dto.importe) * 10 ** 18);;
+    const bidAmount = BigInt(parseFloat(json_request_dto.data.importe) * 10 ** 18);;
   
     const receipt = await currentContract.methods.bid()
-      .send({ from: json_request_dto.address, value: bidAmount })
+      .send({ from: json_request_dto.data.address, value: bidAmount })
       .on('transactionHash', (hash) => {
         console.log('Transaction hash:', hash);
        
@@ -297,7 +315,7 @@ async function fnRealizarOferta(json_request_dto ) {
         var json_response = {
           "tx_hash":receipt.transactionHash,
           "estado":2,
-          "id": json_request_dto.id
+          "id": json_request_dto.data.id
         }
         var json_dto = {
           data:json_response,
@@ -314,7 +332,7 @@ async function fnRealizarOferta(json_request_dto ) {
           "tx_hash":"",
           "estado":3,
           "mensaje":"Error al registrar,  se revirto la transaccion.",
-          "id": json_request_dto.id
+          "id": json_request_dto.data.id
         }
         var json_dto = {
           data:json_response,
@@ -343,7 +361,7 @@ async function fnRealizarOferta(json_request_dto ) {
       "tx_hash":"",
       "estado":3,
       "mensaje":"Error con la red,  no se concreto la transaccino.",
-      "id": json_request_dto.id
+      "id": json_request_dto.data.id
     }   
     var json_dto = {
       data:json_response,
@@ -359,7 +377,7 @@ async function fnRealizarOferta(json_request_dto ) {
   PUBLICAR MENSAJE EN RABBIT
 */
 async function fnPublicarMensajeMQ(_queue, _json){
-  console.log("Se agrega transaccion a ..."+ _queue);
+  console.log("Se agrega transaccion a ...", _queue, _json);
   //conecta a rabbitmq
   amqp.connect('amqp://localhost', function(error0, connection) {
     if (error0) {
