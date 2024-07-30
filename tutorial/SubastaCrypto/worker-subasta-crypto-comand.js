@@ -315,6 +315,7 @@ async function fnRealizarOferta(json_request_dto) {
         var json_response = {
           "tx_hash":receipt.transactionHash,
           "estado":2,
+          "mensaje":"oferta generada correctamente",
           "id": json_request_dto.data.id
         }
         var json_dto = {
