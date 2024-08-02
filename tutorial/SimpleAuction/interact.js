@@ -73,9 +73,9 @@ async function consultaGeneral() {
   const highestBid = await currentContract.methods.highestBid().call();
   console.log("highestBid: " + highestBid);
 
-  const ended = await currentContract.methods.auctionEnd().call();
-  console.log("auctionEnd: " + ended);
+  //const ended = await currentContract.methods.auctionEnd().call();
+  //console.log("auctionEnd: " + ended);
 
 }
-realizarOferta();
+//realizarOferta();
 consultaGeneral();

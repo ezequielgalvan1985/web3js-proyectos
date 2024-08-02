@@ -10,6 +10,14 @@ const utf8EncodeText = new TextEncoder();
 const { Web3 } = require("web3");
 const path = require("path");
 const fs = require("fs");
+
+const web3 = new Web3("http://127.0.0.1:7545/");
+const contractName = "SimpleAuction"; 
+const fileName = `${contractName}.sol`;
+const contractNameAbi = "./"+contractName + "Abi.json";
+const contractNameByteCode = contractName + "Bytecode.bin";
+console.log("contractName: ", contractName);
+
 //FIN CONFIGURACION WEB3 Y CONTRATO SimpleAuction
 
 const Command = {
@@ -23,6 +31,7 @@ const Estado = {
   PENDIENTE: 1,
   ABIERTA: 2,
   CERRADA: 3,
+  COMPLETADA: 4,
   ERROR: -1,
 };
 
@@ -61,46 +70,17 @@ amqp.connect(_server, function(error0, connection) {
           console.log("LICITACION_BID: ",json_request_dto);
           fnRealizarOferta(json_request_dto);
         }
-
+        if (json_request_dto.command===Command.AUCTION_END.toString()){
+          console.log("AUCTION_END: ",json_request_dto);
+          fnAuctionEnd(json_request_dto);
+        }
+        if (json_request_dto.command===Command.WITHDRAW.toString()){
+          console.log("WITHDRAW: ",json_request_dto);
+          fnWidthDraw(json_request_dto);
+        }
       }catch(e){
         console.log("error:",e);
       }
-      
-/*
-      if (json_response_dto.command===Command.BID.toString()){
-        console.log("LICITACION_BID: ",json_request_dto);
-        fnRealizarOferta(json_request_dto);
-      }
-
-
-      switch (json_request_dto.command) {
-        case Command.DEPLOY:
-            console.log("DEPLOY: ",json_request_dto);
-            fnDeployContrato(json_request_dto);
-            break;
-        case Command.AUCTION_END:
-          console.log("AUCTION_END: ",json_request_dto.data);
-          //fnAuctionEnd(json_request_dto.data);
-          break;
-        case Command.WITHDRAW:
-          console.log("WITHDRAW: ",json_request_dto.data);
-          //fnDeployContrato(json_request_dto.data);
-          break;
-        case Command.LICITACION_BID:
-          console.log("LICITACION_BID: ",json_request_dto.data);
-          fnRealizarOferta(json_request_dto.data);
-          break;
-
-        // Puedes tener tantos casos como necesites
-        default:
-            // Código a ejecutar si expresión no coincide con ninguno de los casos
-            break;
-    }
-  */  
-
-      
-      
-
     }, {
     noAck: true
   });
@@ -109,21 +89,12 @@ amqp.connect(_server, function(error0, connection) {
 
 
 
-  async function fnAuctionEnd(json_request_dto) {
-  
-    try {
-      const web3 = new Web3("http://127.0.0.1:7545/");
-  
-      const contractName = "SimpleAuction"; 
-      const contractNameByteCode = contractName + "Bytecode.bin";
-      const contractNameAbi = "./"+contractName + "Abi.json";
-      
-      // Create a new contract object using the ABI and address    
+  async function fnAuctionEnd(json_request_dto) {  
+    try {    
       const abi = require(contractNameAbi);
-      const currentContract = new web3.eth.Contract(abi, json_request_dto.subasta.address);
+      const currentContract = new web3.eth.Contract(abi, json_request_dto.data.subasta.address_contrato);
       currentContract.handleRevert = true;
-      const bidAmount = BigInt(parseFloat(json_request_dto.importe) * 10 ** 18);
-    
+      
       const receipt = await currentContract.methods.auctionEnd()
         .send()
         .on('transactionHash', (hash) => {
@@ -188,21 +159,89 @@ amqp.connect(_server, function(error0, connection) {
       }
       console.log("json_dto: ", json_dto);
       fnPublicarMensajeMQ(_queue_name_response, json_dto);
-  
     }
   }
 
+  //METODO WITHDRAW
+  async function fnWidthDraw(json_request_dto) { 
+    try {
+      const abi = require(contractNameAbi);
+      const currentContract = new web3.eth.Contract(abi, json_request_dto.data.subasta.address_contrato);
+      currentContract.handleRevert = true;
+      
+      const receipt = await currentContract.methods.withdraw()
+        .send({
+          from: json_request_dto.data.address
+        })
+        .on('transactionHash', (hash) => {
+          console.log('Transaction hash:', hash);   
+        })
+        .on('receipt', (receipt) => {
+          console.log('Receipt:', receipt);
+          // Aquí puedes manejar la respuesta de la transacción si es necesario
+          var json_response = {
+            "tx_hash":receipt.transactionHash,
+            "estado":Estado.COMPLETADA,
+            "id": json_request_dto.data.id,
+            "mensaje":"Completada se realizo withdraw correctamente."
+          }
+          var json_dto = {
+            data:json_response,
+            command:json_request_dto.command
+          }
+          console.log("json_dto: ", json_dto);
+          fnPublicarMensajeMQ(_queue_name_response, json_dto);
+        })
+        .on('error', (error) => {
+          console.error('Error:', error);
+          // Manejar cualquier error ocurrido durante la transacción
+          var json_response = {
+            "tx_hash":"",
+            "estado":Estado.ERROR,
+            "mensaje":"Error al registrar,  se revirto la transaccion.",
+            "id": json_request_dto.id
+          }
+          var json_dto = {
+            data:json_response,
+            command:json_request_dto.command
+          }
+          console.log("json_dto: ", json_dto);
+          fnPublicarMensajeMQ(_queue_name_response, json_dto);
+        });
+        
+        //consulta de datos luego de la ejecucion de la transaccion
+        
+        const highestBidder = await currentContract.methods.highestBidder().call();
+        console.log("highestBidder: " + highestBidder);
+        
+        const highestBid = await currentContract.methods.highestBid().call();
+        console.log("highestBid: " + highestBid);
+        
+        //console.log("Transaction Receipt: ", receipt);
+        console.log("Transaction Hash: " + receipt.transactionHash);
+  
+      // Get the updated value of my number
+      
+    } catch (error) {
+      console.error(error);
+      var json_response = {
+        "tx_hash":"",
+        "estado":Estado.ERROR,
+        "mensaje":"Error con la red,  no se concreto la transaccino.",
+        "id": json_request_dto.id
+      }
+      var json_dto = {
+        data:json_response,
+        command:json_request_dto.command
+      }
+      console.log("json_dto: ", json_dto);
+      fnPublicarMensajeMQ(_queue_name_response, json_dto);
+    }
+  }
 
+  //METODO DEPLOY CONTRACT
   async function fnDeployContrato(request ) {
     try {
-
-      const web3 = new Web3("http://127.0.0.1:7545/");
-  
-      const contractName = 'SimpleAuction'; 
-      const fileName = `${contractName}.sol`;
-      console.log("contractName: ", contractName);
-      const contractNameByteCode = contractName + "Bytecode.bin";
-      const contractNameAbi = contractName + "Abi.json";
       const bytecodePath = path.join(__dirname, contractNameByteCode);
       const bytecode = fs.readFileSync(bytecodePath, "utf8");
       const abi = require("./"+contractNameAbi);
@@ -265,9 +304,6 @@ amqp.connect(_server, function(error0, connection) {
         fnPublicarMensajeMQ(_queue_name_response, json_dto);
 
       });
-      
-  
-      
     } catch (error) {
       console.error(error);
       var json_response = {
@@ -287,16 +323,8 @@ amqp.connect(_server, function(error0, connection) {
   }
 
 
-async function fnRealizarOferta(json_request_dto) {
-  
+async function fnRealizarOferta(json_request_dto) {  
   try {
-   
-    const web3 = new Web3("http://127.0.0.1:7545/");
-
-    const contractName = "SimpleAuction"; 
-    const contractNameAbi = "./"+contractName + "Abi.json";
-    
-    
     // Create a new contract object using the ABI and address    
     const abi = require(contractNameAbi);
     const currentContract = new web3.eth.Contract(abi, json_request_dto.data.subasta.address_contrato);
@@ -407,5 +435,3 @@ async function fnPublicarMensajeMQ(_queue, _json){
       });
   });
 }
-
-
