@@ -86,15 +86,15 @@ amqp.connect(_server, function(error0, connection) {
 
 
   async function fnAuctionEnd(json_request_dto) {  
-    try {    
+     
       const abi = require(contractNameAbi);
       const currentContract = new web3.eth.Contract(abi, json_request_dto.data.subasta.address_contrato);
       currentContract.handleRevert = false;
       
       const receipt = await currentContract.methods.auctionEnd()
-        .send()
+        .send({from: json_request_dto.data.address})
         .on('transactionHash', (hash) => {
-         
+          console.log('transactionHash:', hash);
         })
         .on('receipt', (receipt) => {
           console.log('Receipt:', receipt);
@@ -149,34 +149,12 @@ amqp.connect(_server, function(error0, connection) {
   
       // Get the updated value of my number
       
-    } catch (error) {
-      console.error(error);
-      var  revertData = '';
-      var revertReason = ''; 
-      if (error.message.includes('revert')) {
-        // La estructura del mensaje de error puede variar. Usualmente, el mensaje de revert está en la propiedad `data` del error.
-        var  revertData = error.data ? error.data : error.message;
-        var revertReason = revertData.match(/revert (.+)/) ? revertData.match(/revert (.+)/)[1] : 'No se pudo obtener el mensaje de revert';
-      }
-      
-      var json_response = {
-        "tx_hash": "",
-        "estado": 3,
-        "mensaje": `Error al registrar: ${revertReason}`,
-        "id": json_request_dto.data.id
-      }
-      var json_dto = {
-        data:json_response,
-        command:json_request_dto.command
-      }
-      console.log("json_dto: ", json_dto);
-      fnPublicarMensajeMQ(_queue_name_response, json_dto);
-    }
+    
   }
 
   //METODO WITHDRAW
   async function fnWidthDraw(json_request_dto) { 
-    try {
+    
       const abi = require(contractNameAbi);
       const currentContract = new web3.eth.Contract(abi, json_request_dto.data.subasta.address_contrato);
       currentContract.handleRevert = true;
@@ -211,7 +189,7 @@ amqp.connect(_server, function(error0, connection) {
             "tx_hash":"",
             "estado":Estado.ERROR,
             "mensaje":"Error al registrar,  se revirto la transaccion.",
-            "id": json_request_dto.id
+            "id": json_request_dto.data.id,
           }
           var json_dto = {
             data:json_response,
@@ -234,21 +212,7 @@ amqp.connect(_server, function(error0, connection) {
   
       // Get the updated value of my number
       
-    } catch (error) {
-      console.error(error);
-      var json_response = {
-        "tx_hash":"",
-        "estado":Estado.ERROR,
-        "mensaje":"Error con la red,  no se concreto la transaccino.",
-        "id": json_request_dto.id
-      }
-      var json_dto = {
-        data:json_response,
-        command:json_request_dto.command
-      }
-      console.log("json_dto: ", json_dto);
-      fnPublicarMensajeMQ(_queue_name_response, json_dto);
-    }
+    
   }
 
   //METODO DEPLOY CONTRACT
@@ -319,7 +283,7 @@ amqp.connect(_server, function(error0, connection) {
     } catch (error) {
       console.error(error);
       var json_response = {
-        "id":json_request_dto.id,
+        "id":request.data.id,
         "address_contrato": "",
         "estado":Estado.ERROR,
         "tx_hash":"",
@@ -336,7 +300,7 @@ amqp.connect(_server, function(error0, connection) {
 
 
 async function fnRealizarOferta(json_request_dto) {  
-  try {
+ 
     // Create a new contract object using the ABI and address    
     const abi = require(contractNameAbi);
     const currentContract = new web3.eth.Contract(abi, json_request_dto.data.subasta.address_contrato);
@@ -396,30 +360,7 @@ async function fnRealizarOferta(json_request_dto) {
 
     // Get the updated value of my number
     
-  } catch (error) {
-    console.error(error);
-
-    var  revertData = '';
-      var revertReason = ''; 
-      if (error.message.includes('revert')) {
-        // La estructura del mensaje de error puede variar. Usualmente, el mensaje de revert está en la propiedad `data` del error.
-        var  revertData = error.data ? error.data : error.message;
-        var revertReason = revertData.match(/revert (.+)/) ? revertData.match(/revert (.+)/)[1] : 'No se pudo obtener el mensaje de revert';
-      }
-      
-      var json_response = {
-        "tx_hash": "",
-        "estado": 3,
-        "mensaje": `Error al registrar: ${revertReason}`,
-        "id": json_request_dto.data.id
-      }   
-    var json_dto = {
-      data:json_response,
-      command:json_request_dto.command
-    }
-    console.log("json_dto: ", json_dto);
-    fnPublicarMensajeMQ(_queue_name_response, json_dto);
-  }
+  
 }
 
 
